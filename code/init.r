@@ -1,5 +1,24 @@
-here::i_am('code/init.r')
+#' ---
+#' title: "Forum text analyses"
+#' output:
+#'   pdf_document:
+#'     toc: true
+#'     toc_depth: 2
+#'     fig_width: 7
+#'     fig_height: 7
+#' header-includes:
+#'   \usepackage{float}
+#' ---
+
+#+ label1, include = FALSE
+knitr::opts_chunk$set(
+    include = FALSE, 
+    warning = FALSE, 
+    message = FALSE,
+)
+here::i_am("code/init.r")
 library(here)
+options(max.print = 10000)
 library(tidyverse)
 library("writexl")
 library("stopwords")
@@ -14,38 +33,77 @@ spacy_initialize()
 # spacy_download_langmodel("de_core_news_sm")
 # https://spacy.io/models/de#de_dep_news_trf
 library("quanteda")
+library(magrittr)
 
-forum <- readxl::read_xlsx(here("data/forum_extract_with date and time.04.2022.xlsx"))
+#' # Read and basic processing
+forum <- readRDS(here("data/forum.rds"))
 
-#' processing umlaut
-forum <- forum %>%
-    mutate(
-        post = gsub("Ã¤", "ä", post),
-        post = gsub("Ã¶", "ö", post),
-        post = gsub("Ã¼", "ü", post),
-        post = gsub("ÃŸ", "ß", post),
-        post = gsub('Ãœ', 'Ü', post),
-        post = gsub('\"', "", post),
-        post = gsub('[zZ]itat von', "", post)
-    )
+# forum <- list.files(here("data/new")) |>
+#     map_dfr(\(x) read_csv(here('data/new', x))) |>
+#     mutate(
+#         date = gsub(',', '', date),
+#         date = as.Date(date, '%d.%m.%Y')
+#     )
+# saveRDS(forum, here('data/forum.rds'))
+
+#+ include=TRUE
 forum
 
-writexl::write_xlsx(forum, here('data/forum.xlsx'))
+# writexl::write_xlsx(forum, here('data/forum.xlsx'))
 
-# corpus
-cp <- corpus(forum$post)
-summary(cp)
+#' ## Activity over time
+#' 
+#+ cache = TRUE
+sc <- read_csv(
+    "https://raw.githubusercontent.com/OxCGRT/covid-policy-tracker/master/data/timeseries/c1_school_closing.csv"
+) %>%
+    filter(country_code == "DEU") %>%
+        select(-X1, -country_code) |>
+        pivot_longer(-country_name, values_to = 'n_school_closure') %>%
+        mutate(date = as.Date(name, "%d%b%Y")) %>%
+        select(-name)
+sc
 
-cp_st <- tokens(cp, "sentence")
+#+ count_per_day, fig.cap = 'Count number of responses per day', include=TRUE
+forum |>
+    group_by(date) %>%
+    count() %>%
+    full_join(select(sc, -country_name), "date") %>%
+    pivot_longer(-date) %>%
+    mutate(name  = if_else(name == 'n', "Number of messages", "School-closure index"))  |>
+    ggplot(aes(date, value)) +
+    facet_wrap(~name, 2, scales = 'free_y') +
+    geom_line()
 
-# keyword in context
-cptk <- tokens(cp, remove_punct = TRUE)
+# Document features
+dfmat <- tokens(forum$text, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE, remove_url = T) %>%
+    tokens_remove(stopwords("de", source = "stopwords-iso")) %>%
+    dfm()
 
-#' ## Vaccine related discussion
-kwic(cptk, pattern = "vaccine", valuetype = "regex") %>%
-    print(n = Inf)
+library("quanteda.textplots")
 
-#' ## Home-schooling related discussion
-kwic(cptk, pattern = phrase("home school"), valuetype = "regex") %>%
-    print(n = Inf)
+#' ## Word clouds
+#' 
+#+ word_cloud_500p, fig.cap = 'Word clouds (500+)', include=TRUE
+textplot_wordcloud(dfmat,
+    min_count = 500, random_order = FALSE, rotation = 0.25,
+    color = RColorBrewer::brewer.pal(8, "Dark2")
+)
+
+#' \newpage
+#+ word_cloud_100_500, fig.cap = 'Word clouds (100-500)', include=TRUE
+dfmat %>%
+    dfm_trim(max_termfreq = 499) |>
+    textplot_wordcloud(
+        min_count = 100, max_words = 100, random_order = FALSE, rotation = 0.25,
+        min_size = .5, max_size = 2,
+        color = RColorBrewer::brewer.pal(8, "Dark2")
+    )
+
+#' ## Word counts
+#+ word_count_table, results = 'asis', include=TRUE
+topfeatures(dfmat, 1000) %>%
+    tibble(n = ., word = names(.)) %>%
+    arrange(desc(n)) %>%
+    knitr::kable(caption='\\label{tab:word_count}Word count')
 
