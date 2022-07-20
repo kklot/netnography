@@ -22,6 +22,7 @@ options(max.print = 10000)
 library(tidyverse)
 library("writexl")
 library("stopwords")
+library(data.table)
 
 # Text analyses packages
 # https://quanteda.io/articles/quickstart.html
@@ -33,7 +34,9 @@ spacy_initialize()
 # spacy_download_langmodel("de_core_news_sm")
 # https://spacy.io/models/de#de_dep_news_trf
 library("quanteda")
+library("quanteda.textplots")
 library(magrittr)
+devtools::load_all('~/Code/R/ktools/')
 
 #' # Read and basic processing
 forum <- readRDS(here("data/forum.rds"))
