@@ -84,11 +84,33 @@ forum |>
 savePNG(here('fig', 'numMessPerDay'), 7, 4)
 
 # Document features
-dfmat <- tokens(forum$text, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE, remove_url = T) %>%
-    tokens_remove(stopwords("de", source = "stopwords-iso")) %>%
-    dfm()
+tk <- tokens(
+    forum$text, 
+    remove_punct = TRUE, 
+    remove_numbers = TRUE, 
+    remove_symbols = TRUE, 
+    remove_url = T
+) %>%
+    tokens_remove(stopwords("de", source = "stopwords-iso"))
 
-library("quanteda.textplots")
+tk <- lapply(tk, function(x) tolower(x)) %>% as.tokens()
+
+# Docuement features matrix
+dfmat <- dfm(tk)
+
+dim(dfmat)
+nrow(forum)
+
+# Token long form - this is slow
+tk_long <- purrr::map_dfr(
+    names(tk), 
+    function(x) bind_cols(text = x, as_tibble(tk[[x]])))
+
+tk_long %>%
+    rename(word = value) %>%  
+    allot(tk_long)
+saveRDS(tk_long, here('data', 'tk_long.rds'))
+
 
 #' ## Word clouds
 #' 
