@@ -141,6 +141,39 @@ write_xlsx(negative, here('data/negative.xlsx'))
 inner_join(negative, positive, 'word') %>% 
 write_xlsx(here('data/wordNegNPos.xlsx'))
 
+# coocurring
+co <- fcm(tk, context = 'document', count = 'boolean')
+co
+
+topic_and_emotion <- c(allgemein$Allgemein, emotion$emotionen) %>% tolower()
+astrid_term <- fcm_select(co, topic_and_emotion)
+
+astrid_term %>%
+convert('data.frame') %>% 
+as_tibble() %>% 
+select(doc_id, emotion$emotionen) %>% 
+allot(astrid_topic_by_emotion)
+
+rmid <- astrid_topic_by_emotion %>% select(-doc_id) %>% rowSums() %>% `<`(100) %>% which
+
+astrid_topic_by_emotion[-rmid, ] %>% 
+pivot_longer(-doc_id, names_to = 'emotion', values_to = 'freq') %>% 
+ggplot() +
+    geom_tile(aes(emotion, doc_id, fill = freq)) +
+    theme(axis.text.x = element_text(angle = 90), axis.text.y = element_text(size = 7)) +
+    labs(title = "Co-occurence of topic and emotion frequency")
+savePNG(here('fig/co-occurence'), 7, 7)
+# more selective 
+astrid_topic_by_emotion %>% pull(doc_id)
+
+astrid_topic_by_emotion %>%
+filter(doc_id %in% char(test, testen, maskenpflicht, masken, quarantäne)) %>% 
+pivot_longer(-doc_id, names_to = 'emotion', values_to = 'freq') %>% 
+ggplot() +
+    geom_tile(aes(emotion, doc_id, fill = freq)) +
+    theme(axis.text.x = element_text(angle = 90), axis.text.y = element_text(size = 7)) +
+    labs(title = "Co-occurence of topic and emotion frequency")
+savePNG(here('fig/co-occurence-selective'), 7, 4)
 
 #' ## Word clouds
 #' 
