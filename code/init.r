@@ -67,16 +67,21 @@ sc <- read_csv(
         select(-name)
 sc
 
+forum %<>%
+    rename(id = X1) %>% 
+    mutate(id = gsub('post_message_', '', mid)) %>% 
+    arrange(id)
+
 #+ count_per_day, fig.cap = 'Count number of responses per day', include=TRUE
 forum |>
     group_by(date) %>%
     count() %>%
-    full_join(select(sc, -country_name), "date") %>%
     pivot_longer(-date) %>%
-    mutate(name  = if_else(name == 'n', "Number of messages", "School-closure index"))  |>
     ggplot(aes(date, value)) +
     facet_wrap(~name, 2, scales = 'free_y') +
-    geom_line()
+    geom_col() +
+    labs(title = "Number of messages per day")
+savePNG(here('fig', 'numMessPerDay'), 7, 4)
 
 # Document features
 dfmat <- tokens(forum$text, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE, remove_url = T) %>%
