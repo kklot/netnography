@@ -111,6 +111,36 @@ tk_long %>%
     allot(tk_long)
 saveRDS(tk_long, here('data', 'tk_long.rds'))
 
+# Astrid words
+allgemein <- read_table(here('data', 'allgemein.txt'))
+emotion <- read_table(here('data', 'emotion.txt'))
+
+read.csv(here('data/SentiWS_v1.8c/SentiWS_v1.8c_Positive.txt'), sep = '\t', header = FALSE) %>% 
+    as_tibble() %>% 
+    mutate(V1 = gsub('\\|.*', '', V1)) %>% 
+    separate_rows(V3, sep = ',') %>% 
+    select(word = V3, score = V2) %>% 
+    mutate(word = tolower(word)) %>% 
+    filter(nchar(word) != 0) %>% 
+    arrange(desc(score)) %>% 
+    allot(positive)
+write_xlsx(positive, here('data/positive.xlsx'))
+
+read.csv(here('data/SentiWS_v1.8c/SentiWS_v1.8c_Negative.txt'), sep = '\t', header = FALSE) %>% 
+    as_tibble() %>% 
+    mutate(V1 = gsub('\\|.*', '', V1)) %>% 
+    separate_rows(V3, sep = ',') %>% 
+    select(word = V3, score = V2) %>% 
+    mutate(word = tolower(word)) %>% 
+    filter(nchar(word) != 0) %>% 
+    arrange(score) %>% 
+    allot(negative)
+write_xlsx(negative, here('data/negative.xlsx'))
+
+# List of words with both scores
+inner_join(negative, positive, 'word') %>% 
+write_xlsx(here('data/wordNegNPos.xlsx'))
+
 
 #' ## Word clouds
 #' 
