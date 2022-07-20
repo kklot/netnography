@@ -175,6 +175,20 @@ ggplot() +
     labs(title = "Co-occurence of topic and emotion frequency")
 savePNG(here('fig/co-occurence-selective'), 7, 4)
 
+#' ## Most talkative users
+forum %>% 
+    group_by(user)  %>% 
+    count() %>% 
+    arrange(desc(n)) %>%
+    filter(n > 100) %>%
+    filter(user != 'Inaktiver User') %>%
+    ggplot() + 
+        geom_col(aes(user, n)) +
+        coord_polar() +
+        labs(title = "User with 100+ messages")
+
+savePNG(here('fig', 'user100plus'), 7, 7)
+
 #' ## Word clouds
 #' 
 #+ word_cloud_500p, fig.cap = 'Word clouds (500+)', include=TRUE
